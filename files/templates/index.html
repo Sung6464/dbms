@@ -3,27 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StoreBase | Inventory Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>StoreBase | Premium Inventory</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
     <div class="app-container">
         <header class="topbar">
             <div class="logo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#primary-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <defs>
+                        <linearGradient id="primary-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#8b5cf6" />
+                            <stop offset="100%" stop-color="#ec4899" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
                 <span>StoreBase</span>
             </div>
             
             <div class="nav-tabs">
-                <button class="tab-btn active" data-tab="all">All Inventory</button>
+                <button class="tab-btn active" data-tab="all">Overview</button>
                 <button class="tab-btn" data-tab="low-stock">Low Stock Alerts</button>
             </div>
 
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="openProductModal()">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    Add Product
+                    New Product
                 </button>
             </div>
         </header>
@@ -31,8 +42,8 @@
         <main>
             <section class="stats-overview" id="statsContainer">
                 <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: #818cf8;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <div class="stat-icon" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3);">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
                     </div>
                     <div class="stat-info">
                         <span class="stat-label">Total Products</span>
@@ -40,20 +51,20 @@
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #fbbf24;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3);">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                     </div>
                     <div class="stat-info">
-                        <span class="stat-label">Low Stock Items</span>
+                        <span class="stat-label">Critical Stock</span>
                         <h3 class="stat-value" id="statLowStock">-</h3>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #34d399;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                     </div>
                     <div class="stat-info">
-                        <span class="stat-label">Inventory Value</span>
+                        <span class="stat-label">Inventory Valuation</span>
                         <h3 class="stat-value" id="statValue">-</h3>
                     </div>
                 </div>
@@ -65,7 +76,7 @@
                     <div class="filters">
                         <div class="search-bar">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                            <input type="text" id="searchInput" placeholder="Search...">
+                            <input type="text" id="searchInput" placeholder="Search inventory...">
                         </div>
                         <select id="categoryFilter">
                             <option value="">All Categories</option>
@@ -85,32 +96,34 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">Add Product</h3>
-                <button class="close-btn" onclick="closeModal('productModal')">&times;</button>
+                <button class="close-btn" onclick="closeModal('productModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             <form id="productForm" onsubmit="handleProductSubmit(event)">
                 <input type="hidden" id="productId">
                 <div class="form-group">
-                    <label>Name</label>
-                    <input type="text" id="productName" required>
+                    <label>Product Name</label>
+                    <input type="text" id="productName" placeholder="e.g. Wireless Headphones" required>
                 </div>
                 <div class="form-group">
                     <label>Category</label>
-                    <input type="text" id="productCategory" required list="categoryList">
+                    <input type="text" id="productCategory" placeholder="e.g. Electronics" required list="categoryList">
                     <datalist id="categoryList"></datalist>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Price (₹)</label>
-                        <input type="number" id="productPrice" min="0" step="0.01" required>
+                        <label>Unit Price (₹)</label>
+                        <input type="number" id="productPrice" min="0" step="0.01" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
-                        <label>Stock</label>
-                        <input type="number" id="productStock" min="0" required>
+                        <label>Initial Stock</label>
+                        <input type="number" id="productStock" min="0" placeholder="0" required>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea id="productDesc" rows="3"></textarea>
+                    <textarea id="productDesc" rows="3" placeholder="Brief description of the product..."></textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" onclick="closeModal('productModal')">Cancel</button>
@@ -124,18 +137,20 @@
     <div class="modal-overlay" id="restockModal">
         <div class="modal-content modal-sm">
             <div class="modal-header">
-                <h3>Restock Product</h3>
-                <button class="close-btn" onclick="closeModal('restockModal')">&times;</button>
+                <h3>Restock Items</h3>
+                <button class="close-btn" onclick="closeModal('restockModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             <form id="restockForm" onsubmit="handleRestockSubmit(event)">
                 <input type="hidden" id="restockProductId">
                 <div class="form-group">
-                    <label>Quantity to add</label>
+                    <label>Quantity Received</label>
                     <input type="number" id="restockQty" min="1" value="10" required>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" onclick="closeModal('restockModal')">Cancel</button>
-                    <button type="submit" class="btn btn-success">Restock</button>
+                    <button type="submit" class="btn btn-success">Update Stock</button>
                 </div>
             </form>
         </div>

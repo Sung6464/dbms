@@ -1,46 +1,81 @@
-"""
-seed.py  —  Populates MongoDB with sample data matching the StoreBase UI.
-Run once:  python seed.py
-"""
-from pymongo import MongoClient
-from datetime import datetime
+import pymysql
+import os
 
-client = MongoClient("mongodb://localhost:27017/")
-db = client["storebase"]
-col = db["products"]
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
+MYSQL_USER = os.environ.get("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "")
 
-col.delete_many({})   # clear existing
+print(f"Connecting to MySQL at {MYSQL_HOST} as {MYSQL_USER}...")
+# Connect without database first to create it
+try:
+    connection = pymysql.connect(
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        autocommit=True
+    )
+except Exception as e:
+    print(f"❌ Failed to connect to MySQL: {e}")
+    print("Please make sure MySQL is running and accessible.")
+    exit(1)
 
-now = datetime.utcnow().isoformat()
+with connection.cursor() as cursor:
+    print("Creating database 'storebase'...")
+    cursor.execute("CREATE DATABASE IF NOT EXISTS storebase")
+    cursor.execute("USE storebase")
+    
+    print("Creating 'products' table...")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS products (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            category VARCHAR(100) DEFAULT 'Uncategorized',
+            price DECIMAL(10,2) NOT NULL,
+            stock INT DEFAULT 0,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    print("Clearing existing data...")
+    cursor.execute("TRUNCATE TABLE products")
+    
+    sample = [
+        # Electronics (3)
+        ("Wireless Headphones", "Electronics", 2499.00, 12, "Noise-cancelling Bluetooth headphones, 30h battery."),
+        ("USB-C Hub 7-in-1", "Electronics", 1299.00, 8, "HDMI, USB-A x3, SD card, PD charging."),
+        ("Mechanical Keyboard", "Electronics", 3999.00, 3, "TKL layout, blue switches, RGB backlit."),
+        # Clothing (1)
+        ("Cotton T-Shirt", "Clothing", 499.00, 0, "100% cotton, available in multiple colours."),
+        # Food & Beverage (1)
+        ("Green Tea Pack", "Food & Beverage", 349.00, 2, "25 pyramid tea bags, antioxidant rich."),
+        # Furniture (1)
+        ("Ergonomic Chair", "Furniture", 12999.00, 4, "Lumbar support, adjustable armrests, mesh back."),
+        # Stationery (2)
+        ("Notebook Set", "Stationery", 299.00, 0, "Pack of 3 A5 dotted notebooks, 160 pages each."),
+        ("Ballpoint Pens", "Stationery", 99.00, 0, "12-pack, 0.7mm smooth blue ink."),
+        # Sports (2)
+        ("Yoga Mat", "Sports", 849.00, 1, "6mm non-slip eco TPE mat with carry strap."),
+        ("Resistance Bands Set", "Sports", 599.00, 2, "5 resistance levels, includes carry bag.")
+    ]
+    
+    cursor.executemany(
+        "INSERT INTO products (name, category, price, stock, description) VALUES (%s, %s, %s, %s, %s)",
+        sample
+    )
+    
+    inserted_count = cursor.rowcount
+    print(f"✅  Inserted {inserted_count} products into storebase.products")
 
-sample = [
-    # Electronics (3)
-    {"name": "Wireless Headphones",  "category": "Electronics",   "price": 2499,  "stock": 12, "description": "Noise-cancelling Bluetooth headphones, 30h battery."},
-    {"name": "USB-C Hub 7-in-1",     "category": "Electronics",   "price": 1299,  "stock": 8,  "description": "HDMI, USB-A x3, SD card, PD charging."},
-    {"name": "Mechanical Keyboard",  "category": "Electronics",   "price": 3999,  "stock": 3,  "description": "TKL layout, blue switches, RGB backlit."},
-    # Clothing (1)
-    {"name": "Cotton T-Shirt",       "category": "Clothing",      "price": 499,   "stock": 0,  "description": "100% cotton, available in multiple colours."},
-    # Food & Beverage (1)
-    {"name": "Green Tea Pack",       "category": "Food & Beverage","price": 349,  "stock": 2,  "description": "25 pyramid tea bags, antioxidant rich."},
-    # Furniture (1)
-    {"name": "Ergonomic Chair",      "category": "Furniture",     "price": 12999, "stock": 4,  "description": "Lumbar support, adjustable armrests, mesh back."},
-    # Stationery (2)
-    {"name": "Notebook Set",         "category": "Stationery",    "price": 299,   "stock": 0,  "description": "Pack of 3 A5 dotted notebooks, 160 pages each."},
-    {"name": "Ballpoint Pens",       "category": "Stationery",    "price": 99,    "stock": 0,  "description": "12-pack, 0.7mm smooth blue ink."},
-    # Sports (2)
-    {"name": "Yoga Mat",             "category": "Sports",        "price": 849,   "stock": 1,  "description": "6mm non-slip eco TPE mat with carry strap."},
-    {"name": "Resistance Bands Set", "category": "Sports",        "price": 599,   "stock": 2,  "description": "5 resistance levels, includes carry bag."},
-]
+    cursor.execute("SELECT COUNT(*) FROM products")
+    total = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM products WHERE stock < 5")
+    low = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT SUM(price * stock) FROM products")
+    val = cursor.fetchone()[0] or 0
+    
+    print(f"📦  Total: {total}  |  Low stock: {low}  |  Value: ₹{val:,.0f}")
 
-for p in sample:
-    p["created_at"] = now
-
-result = col.insert_many(sample)
-print(f"✅  Inserted {len(result.inserted_ids)} products into storebase.products")
-
-# Quick verification
-total = col.count_documents({})
-low   = col.count_documents({"stock": {"$lt": 5}})
-pipeline = [{"$group": {"_id": None, "v": {"$sum": {"$multiply": ["$price", "$stock"]}}}}]
-val = list(col.aggregate(pipeline))
-print(f"📦  Total: {total}  |  Low stock: {low}  |  Value: ₹{val[0]['v']:,.0f}")
+connection.close()

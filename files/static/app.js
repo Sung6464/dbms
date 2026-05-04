@@ -37,10 +37,10 @@ async function loadTab(tab) {
     document.getElementById('categoryFilter').value = '';
 
     if (tab === 'low-stock') {
-        title.textContent = 'Low Stock Alerts';
+        title.textContent = 'Action Required: Low Stock';
         fetchLowStock();
     } else {
-        title.textContent = 'Current Inventory';
+        title.textContent = 'Complete Inventory';
         fetchProducts();
     }
 }
@@ -51,10 +51,33 @@ async function fetchStats() {
     try {
         const res = await fetch('/api/stats');
         const data = await res.json();
-        document.getElementById('statTotal').textContent = data.total_products;
-        document.getElementById('statLowStock').textContent = data.low_stock;
-        document.getElementById('statValue').textContent = '₹' + data.total_value.toLocaleString('en-IN');
+        
+        // Animate numbers
+        animateValue("statTotal", 0, data.total_products, 1000);
+        animateValue("statLowStock", 0, data.low_stock, 1000);
+        
+        // Format currency with animation logic omitted for simplicity on float
+        document.getElementById('statValue').textContent = '₹' + data.total_value.toLocaleString('en-IN', { maximumFractionDigits: 0 });
     } catch (error) { console.error(error); }
+}
+
+function animateValue(id, start, end, duration) {
+    if (start === end) return;
+    let obj = document.getElementById(id);
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        // easeOutQuart
+        const easeProgress = 1 - Math.pow(1 - progress, 4);
+        obj.innerHTML = Math.floor(easeProgress * (end - start) + start);
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        } else {
+            obj.innerHTML = end;
+        }
+    };
+    window.requestAnimationFrame(step);
 }
 
 async function fetchCategories() {
@@ -75,7 +98,7 @@ async function fetchCategories() {
 }
 
 async function fetchProducts(search = '', category = '') {
-    if (currentTab === 'low-stock') return; // Handled separately
+    if (currentTab === 'low-stock') return;
     try {
         const params = new URLSearchParams();
         if (search) params.append('search', search);
@@ -102,25 +125,32 @@ function renderProducts(products) {
     grid.innerHTML = '';
     
     if (products.length === 0) {
-        grid.innerHTML = '<div class="empty-state">No products found.</div>';
+        grid.innerHTML = `
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <p>No products found matching your criteria.</p>
+            </div>`;
         return;
     }
 
-    products.forEach(p => {
+    products.forEach((p, index) => {
         const isOut = p.stock === 0;
         const isLow = p.stock > 0 && p.stock < 5;
         const stockClass = isOut ? 'stock-out' : (isLow ? 'stock-low' : 'stock-good');
         
+        // Add staggered animation delay
+        const delay = (index % 10) * 0.05;
+        
         grid.insertAdjacentHTML('beforeend', `
-            <div class="product-card">
+            <div class="product-card" style="animation-delay: ${delay}s">
                 <div class="product-actions">
-                    <button class="btn-icon" title="Edit" onclick="editProduct('${p._id}')">
+                    <button class="btn-icon" title="Edit" onclick="editProduct('${p.id}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
-                    <button class="btn-icon" title="Restock" onclick="openRestockModal('${p._id}')">
+                    <button class="btn-icon" title="Restock" onclick="openRestockModal('${p.id}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     </button>
-                    <button class="btn-icon" style="color:var(--danger-color)" title="Delete" onclick="deleteProduct('${p._id}')">
+                    <button class="btn-icon delete" title="Delete" onclick="deleteProduct('${p.id}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                 </div>
@@ -128,8 +158,10 @@ function renderProducts(products) {
                 <h3 class="product-name">${p.name}</h3>
                 <p class="product-desc">${p.description}</p>
                 <div class="product-footer">
-                    <div class="product-price">₹${p.price.toLocaleString('en-IN')}</div>
-                    <div class="product-stock ${stockClass}">${p.stock} in stock</div>
+                    <div class="product-price">₹${p.price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                    <div class="product-stock ${stockClass}">
+                        ${isOut ? 'Out of Stock' : (isLow ? `Low Stock: ${p.stock}` : `${p.stock} Available`)}
+                    </div>
                 </div>
             </div>
         `);
@@ -138,22 +170,28 @@ function renderProducts(products) {
 
 // ================= MODALS & ACTIONS =================
 
-function openModal(id) { document.getElementById(id).classList.add('active'); }
-function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function openModal(id) { 
+    const modal = document.getElementById(id);
+    modal.classList.add('active'); 
+}
+
+function closeModal(id) { 
+    document.getElementById(id).classList.remove('active'); 
+}
 
 function openProductModal() {
-    document.getElementById('modalTitle').textContent = 'Add Product';
+    document.getElementById('modalTitle').textContent = 'Add New Product';
     document.getElementById('productForm').reset();
     document.getElementById('productId').value = '';
     openModal('productModal');
 }
 
 function editProduct(id) {
-    const p = allProducts.find(x => x._id === id);
+    const p = allProducts.find(x => x.id == id);
     if (!p) return;
     
     document.getElementById('modalTitle').textContent = 'Edit Product';
-    document.getElementById('productId').value = p._id;
+    document.getElementById('productId').value = p.id;
     document.getElementById('productName').value = p.name;
     document.getElementById('productCategory').value = p.category;
     document.getElementById('productPrice').value = p.price;
@@ -212,7 +250,7 @@ async function handleRestockSubmit(e) {
 }
 
 async function deleteProduct(id) {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+    if (!confirm('Are you sure you want to permanently delete this product?')) return;
     try {
         await fetch(`/api/products/${id}`, { method: 'DELETE' });
         refreshData();
@@ -223,4 +261,11 @@ function refreshData() {
     fetchStats();
     fetchCategories();
     loadTab(currentTab);
+}
+
+// Close modal on outside click
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal-overlay')) {
+        event.target.classList.remove('active');
+    }
 }
